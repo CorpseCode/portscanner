@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# Check if an argument (text file) is provided
+if [ -z "$1" ]; then
+  echo "Usage: $0 <text_file>"
+  exit 1
+fi
+
+# Store the argument in a variable
+TEXT_FILE=$1
+HTML_OUTPUT="scan_result.html"
+
+# Read the target from the text file
+TARGET=$(head -n 1 $TEXT_FILE | cut -d' ' -f5-)
+
+# HTML setup
+echo "<html><head><title>Nmap Scan Results</title>" > $HTML_OUTPUT
+echo "<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #0f0f0f; /* Very Dark Gray */
+    color: #00ffff; /* Cyan */
+  }
+  .container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #1a1a1a; /* Dark Gray */
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); /* Cyan Glow */
+    border-radius: 5px;
+    animation: fadeIn 1s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  h1 {
+    text-align: center;
+    color: #00ffff; /* Cyan */
+    animation: fadeInHeading 2s ease-in-out;
+  }
+  @keyframes fadeInHeading {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  h2 {
+    color: #00ffff; /* Cyan */
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #1a1a1a; /* Dark Gray */
+    border: 1px solid #00ffff; /* Cyan Border */
+    opacity: 0;
+    transform: translateY(20px);
+    animation: popUpTable 1s ease-in-out forwards;
+  }
+  @keyframes popUpTable {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #00ffff; /* Cyan Border */
+  }
+  th {
+    background-color: #00ffff; /* Cyan */
+    color: #000000; /* Black Text */
+  }
+  a {
+    color: #00ffff;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+</style>" >> $HTML_OUTPUT
+echo "<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('h1').style.opacity = 1;
+  document.querySelector('table').style.opacity = 1;
+});
+</script>" >> $HTML_OUTPUT
+echo "</head><body>" >> $HTML_OUTPUT
+echo "<div class='container'>" >> $HTML_OUTPUT
+echo "<h1>Nmap Scan Results</h1>" >> $HTML_OUTPUT
+echo "<h2>Target: $TARGET</h2>" >> $HTML_OUTPUT
+
+# Read the text file and convert it to an HTML table
+echo "<table><tr><th>Port</th><th>State</th><th>Service</th></tr>" >> $HTML_OUTPUT
+
+# Skip the first 4 lines and read the rest of the text file
+tail -n +5 $TEXT_FILE | while IFS=$'\t' read -r PORT STATE SERVICE; do
+  PORT_NUMBER=$(echo $PORT | cut -d'/' -f1)
+  PORT_LINK="https://www.speedguide.net/port.php?port=$PORT_NUMBER"
+  echo "<tr><td><a href='$PORT_LINK' target='_blank'>$PORT</a></td><td>$STATE</td><td>$SERVICE</td></tr>" >> $HTML_OUTPUT
+done
+
+# Close HTML tags
+echo "</table>" >> $HTML_OUTPUT
+echo "</div></body></html>" >> $HTML_OUTPUT
+
+echo "HTML output saved to $HTML_OUTPUT"
+

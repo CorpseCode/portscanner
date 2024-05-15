@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Check if an argument (hostname or IP) is provided
+if [ -z "$1" ]; then
+  echo "Usage: $0 <hostname_or_ip>"
+  exit 1
+fi
+
+# Store the argument in a variable
+TARGET=$1
+
+# Get the current timestamp
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+
+# Define the text output file name with the timestamp
+TEXT_OUTPUT="result-${TIMESTAMP}.txt"
+
+# Perform a port scan without pinging first
+echo "Scanning ports on $TARGET without pinging..."
+SCAN_RESULT=$(nmap -Pn $TARGET)
+
+# Initialize text output
+echo "Nmap Scan Results for $TARGET" > $TEXT_OUTPUT
+echo "-----------------------------------------" >> $TEXT_OUTPUT
+echo -e "Port\t\tState\t\tService" >> $TEXT_OUTPUT
+echo "-----------------------------------------" >> $TEXT_OUTPUT
+
+# Check if there are no open ports
+if echo "$SCAN_RESULT" | grep -q "0 hosts up"; then
+  echo "No hosts are up according to the scan without pinging."
+  echo "No hosts are up according to the scan without pinging." >> $TEXT_OUTPUT
+elif echo "$SCAN_RESULT" | grep -q "All 1000 scanned ports on $TARGET (host down)"; then
+  echo "No open ports found without pinging."
+  echo "No open ports found without pinging." >> $TEXT_OUTPUT
+
+  # Ask the user if they want to scan with pinging
+  read -p "Do you want to scan with pinging? (y/n): " RESPONSE
+  if [[ "$RESPONSE" =~ ^[Yy]$ ]]; then
+    echo "Scanning ports on $TARGET with pinging..."
+    SCAN_RESULT=$(nmap $TARGET)
+    echo "Scan results with pinging:" >> $TEXT_OUTPUT
+  else
+    echo "Exiting without scanning with pinging."
+    echo "Exiting without scanning with pinging." >> $TEXT_OUTPUT
+    exit 0
+  fi
+fi
+
+# Parse scan results to extract port, state, and service
+PORTS=$(echo "$SCAN_RESULT" | grep -E "^[0-9]+/tcp" | awk '{print $1}')
+STATES=$(echo "$SCAN_RESULT" | grep -E "^[0-9]+/tcp" | awk '{print $2}')
+SERVICES=$(echo "$SCAN_RESULT" | grep -E "^[0-9]+/tcp" | awk '{print $3}')
+
+# Fill text file with scan results
+IFS=$'\n'
+for i in $(seq 1 $(echo "$PORTS" | wc -l)); do
+  PORT=$(echo "$PORTS" | sed -n "${i}p")
+  STATE=$(echo "$STATES" | sed -n "${i}p")
+  SERVICE=$(echo "$SERVICES" | sed -n "${i}p")
+  echo -e "$PORT\t$STATE\t$SERVICE" >> $TEXT_OUTPUT
+done
+
+echo "Scan results saved to $TEXT_OUTPUT"
+
